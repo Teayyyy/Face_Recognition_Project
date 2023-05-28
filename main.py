@@ -5,7 +5,7 @@ Data are set as follows:
   Each person, contains several images of its faces, and is preprocessed to face-descriptors (128D)
   Data are stored in a .cvs file, and will be loaded when program initialize.
 
-* new person: see create_new.py
+EXIT PROGRAM: Q
 """
 
 import cv2
