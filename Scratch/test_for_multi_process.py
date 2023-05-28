@@ -8,6 +8,10 @@ Data are set as follows:
 * new person: see create_new.py
 """
 
+"""
+don't look at this file XD
+"""
+
 import cv2
 import dlib
 import numpy as np
@@ -22,7 +26,6 @@ class Face_Recognition:
         Caution: In column called 'descriptors', it's stored in String, should use ast.literal_eval() to convert
                 also, try to use description like: self_face = random.sample(self_faces, 1)[0] <--- 0 matters!!
     """
-
     def __init__(self):
         self.person_info = pd.read_csv('test_faces_inner_outer_moments.csv')
         assert len(self.person_info) > 0, "Must over 1 person!"
@@ -44,12 +47,6 @@ class Face_Recognition:
         self._thread_recognize = None
         # Init img
         self._img_available = None
-        # If person in camera is recognized as familiar person, and name of it
-        self._if_recognized = False
-        self._recognized_name = 'UNKNOWN'
-        # Init thread lock
-        self._lock_thread = threading.Lock()
-        self._exit_thread = False
 
         print('------------------------------init complete------------------------------')
 
@@ -61,14 +58,12 @@ class Face_Recognition:
     """
     convert str to list 
     """
-
     def convert2list(self):
         self.person_info['descriptors'] = self.person_info['descriptors'].apply(lambda x: ast.literal_eval(x))
 
     """
     calculating distance between two descriptors
     """
-
     def _calc_distance(self, des_a, des_b):
         return np.sqrt(np.sum(np.square(np.array(des_a) - np.array(des_b))))
 
@@ -78,52 +73,43 @@ class Face_Recognition:
     """
     def _image_processing(self):
         # compute face and descriptors
-        while True:
-            if self._exit_thread: break
-            # check if any img available
-            with self._lock_thread:
-                if self._img_available is None:
-                    continue
-
-            det_faces = self._face_detector(self._img_available, 1)
-            if len(det_faces) > 0:
-                print('detected!')
-                det_face = det_faces[0]
-                shape = self._shape_predictor(self._img_available, det_face)
-                descriptor = self._face_recognizer.compute_face_descriptor(self._img_available, shape)
-                # making rectangle of detected face
-                left, top, right, bottom = det_face.left(), det_face.top(), det_face.right(), det_face.bottom()
-                self._det_face_info = [[left, top, right, bottom], descriptor]
-            self._img_available = None
-            # return [[left, top, right, bottom], descriptor]
-            # TODO: recognize face in here?
-
-            with self._lock_thread:
-                self._img_available = None
-        # end while
+        if self._img_available is None:
+            return
+        det_faces = self._face_detector(self._img_available, 1)
+        if len(det_faces) > 0:
+            print('detected!')
+            det_face = det_faces[0]
+            shape = self._shape_predictor(self._img_available, det_face)
+            descriptor = self._face_recognizer.compute_face_descriptor(self._img_available, shape)
+            # making rectangle of detected face
+            left, top, right, bottom = det_face.left(), det_face.top(), det_face.right(), det_face.bottom()
+            self._det_face_info = [[left, top, right, bottom], descriptor]
+        self._img_available = None
+        # return [[left, top, right, bottom], descriptor]
+        # TODO: recognize face in here?
 
     """
     Using web cam to capture faces and recognize, Including two parts: capture & recognize
     each part is processed in one thread, 2 threads total
     """
-
     def video_capture(self):
         print("Status: Capture Begin!")
         count: int = 0
         while True:
-            count += 1
+            # count += 1
             _, frame = self.camera.read()
             # TODO: use another thread to process img recognition
-            if count == 3:
-                self._img_available = frame
-                count = 0
-            # self._image_processing()
+            # if count == 2:
+            self._img_available = frame
+            self._image_processing()
+            # count = 0
             # use det_face_info to show faces pos on frame
             # TODO: recognize_face if this is familiar person
             if len(self._det_face_info) != 0:
                 pos1, pos2 = (self._det_face_info[0][0], self._det_face_info[0][1]), \
                     (self._det_face_info[0][2], self._det_face_info[0][3])
                 cv2.rectangle(frame, pos1, pos2, [255, 0, 0], 2)
+                pass
             cv2.imshow('frame', frame)
 
             # exit port
@@ -133,18 +119,14 @@ class Face_Recognition:
         self._release_resources()
         pass
 
-    def start(self):
-        process_thread = threading.Thread(target=self._image_processing)
-        process_thread.start()
-        self.video_capture()
-        # stop background thread
-        self._exit_thread = True
+
+
+
 
 
 def main():
     fr = Face_Recognition()
-    fr.start()
-    # fr.video_capture()
+    fr.video_capture()
     pass
 
 
